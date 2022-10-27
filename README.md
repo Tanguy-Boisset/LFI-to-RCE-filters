@@ -19,9 +19,12 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -c CMD, --cmd CMD     execute a single command then stop program
+  -c COOKIE, --cookie COOKIE
+                        cookie for the GET request
+  -x CMD, --cmd CMD     execute a single command then stop program
   -f FILE, --file FILE  remote file to use : this should point to a valid file on the victim's server. Default : /etc/passwd
   -d, --debug           troubleshooting
+
 ```
 
 ## Explanation
