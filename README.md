@@ -56,4 +56,4 @@ For more technical details, check the links in Credits !
 Disclaimer : I did NOT found this exploit, I only used it to build a ready-to-use script useful for CTF or pentests. Full credit for the exploit goes to loknop.
 
 Exploit and most of the code : https://gist.github.com/loknop/b27422d355ea1fd0d90d6dbc1e278d4d \
-Improvements : https://book.hacktricks.xyz/pentesting-web/file-inclusion/lfi2rce-via-php-filters
+Chain generator : https://github.com/synacktiv/php_filter_chain_generator
