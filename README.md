@@ -21,6 +21,7 @@ optional arguments:
   -h, --help            show this help message and exit
   -c COOKIE, --cookie COOKIE
                         cookie for the GET request
+  --phpinfo             fetch phpinfo from the server and store it in phpinfo.html
   -x CMD, --cmd CMD     execute a single command then stop program
   -f FILE, --file FILE  remote file to use : this should point to a valid file on the victim's server. Default : /etc/passwd
   -d, --debug           troubleshooting
