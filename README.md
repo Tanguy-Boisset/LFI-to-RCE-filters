@@ -47,9 +47,9 @@ Then, you can use this script to gain an easy RCE (no need to check for logging 
 
 For this you'll only need a known file on the system which is readable by the user the server is running as. By default, it uses /etc/passwd but if this file is not accessible, you have to change it with the `-f` or `--file` argument. This will be the case if the server is running on Windows for example !
 
-A smart choice could be using the vulnerable PHP file on the server ! For example :
+A smart choice could be using another PHP file on the server ! For example :
 
-`python3 lfi-to-rce.py http://example.com/vuln_page.php file --file "./vuln_page.php"`
+`python3 lfi-to-rce.py http://example.com/vuln_page.php file --file "../index.php"`
 
 For more technical details, check the links in Credits !
 
