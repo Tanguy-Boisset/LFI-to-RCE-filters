@@ -54,7 +54,7 @@ A smart choice could be using another PHP file on the server ! For example :
 For more technical details, check the links in Credits !
 
 ## Credits
-Disclaimer : I did NOT found this exploit, I only used it to build a ready-to-use script useful for CTF or pentests. Full credit for the exploit goes to loknop.
+Disclaimer : I did NOT find this exploit, I only used it to build a ready-to-use script useful for CTF or pentests. Full credit for the exploit goes to loknop.
 
 Exploit and most of the code : https://gist.github.com/loknop/b27422d355ea1fd0d90d6dbc1e278d4d \
 Chain generator : https://github.com/synacktiv/php_filter_chain_generator
